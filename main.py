@@ -1,5 +1,7 @@
 from enum import Enum
-from fastapi import FastAPI
+from tkinter.messagebox import NO
+from fastapi import FastAPI, Query, Path
+from pydantic import BaseModel, Field
 
 app = FastAPI()
 
@@ -67,17 +69,29 @@ fake_items_db = [{"item_name": "aaa"}, {"item_name": "bbb"}, {"item_name": "ccc"
 #         return "item idx should between 0 ~ {}".format(item_num)
 
 
+# @app.get("/items/{item_id}")
+# async def read_item(item_id: str, q: str | None = Query(default=None, max_length=50), short: bool = False):
+#     item = {"item_id": item_id, 'q': q}
+#     if not short:
+#         item.update({"desc": "This is an amazing item that has a long description"})
+#     return item
 @app.get("/items/{item_id}")
-async def read_item(item_id: str, q: str, short: bool = False):
-    item = {"item_id": item_id, 'q': q}
-    if not short:
-        item.update({"desc": "This is an amazing item that has a long description"})
-    return item
+async def read_items(item_id: int = Path(title="The ID of the item to get"), q: str | None = Query(default=None, alias='item-query')):
+    result = {"item_id": item_id}
+    print(q)
+    if q:
+        result.update({"q": q})
+    return result
 
 
-@app.get("/items/")
-async def read_items(skip: int = 0, limit: int = 10):
-    return fake_items_db[skip:skip+limit]
+
+# @app.get("/items/")
+# async def read_items(skip: int = 0, limit: int = 10):
+#     return fake_items_db[skip:skip+limit]
+# @app.get("/items/")
+# async def read_items(q: list[str] | None = Query(default=[])):
+#     query_items = {"q": q}
+#     return query_items
 
 
 @app.get("/users/{user_id}/items/{item_id}")
@@ -90,15 +104,16 @@ async def read_user_item(user_id: int, item_id: str, q: str | None = None, short
     return item
 
 
-from pydantic import BaseModel
-
-
 class Item(BaseModel):
     name: str
     description: str | None = None
     price: float
     tax: float | None = None
 
+
+class User(BaseModel):
+    username: str
+    full_name: str | None = None
 
 # def item_wrapper(item: Item):
 #     item_dict = item.dict()
@@ -117,11 +132,27 @@ async def create_item1(item: Item):
     return item_dict
 
 
-@app.post("/items/{item_id}")
-async def create_item2(item_id: int, item: Item, q: str | None = None):
-    item_dict = await create_item1(item)
-    result =  {"item_id": item_id, **item_dict} # **연산자는 dict을 merge할때 사용.
-    if q:
-        result.update({"q": q})
-    return result
+# @app.put("/items/{item_id}")
+# async def create_item2(item_id: int, item: Item, q: str | None = None):
+#     item_dict = await create_item1(item)
+#     result =  {"item_id": item_id, **item_dict} # **연산자는 dict을 merge할때 사용.
+#     if q:
+#         result.update({"q": q})
+#     return result
 
+@app.put("/items/{item_id}")
+async def update_item(
+    *, # 왜 있는거지???
+    item_id: int = Path(title="The ID of the item to get", ge=0, le=1000),
+    q: str | None = None,
+    item: Item | None = None,
+    user: User | None = None
+):
+    results = {"item_id": item_id}
+    if q:
+        results.update({"q": q})
+    if item:
+        results.update({"item": item})
+    if user:
+        results.update({"user": user})
+    return results
