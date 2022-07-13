@@ -1,7 +1,9 @@
+from curses.ascii import HT
 from enum import Enum
 from tkinter.messagebox import NO
-from fastapi import FastAPI, Query, Path
-from pydantic import BaseModel, Field
+from unittest import result
+from fastapi import FastAPI, Query, Path, Cookie
+from pydantic import BaseModel, Field, HttpUrl
 
 app = FastAPI()
 
@@ -93,6 +95,10 @@ async def read_items(item_id: int = Path(title="The ID of the item to get"), q: 
 #     query_items = {"q": q}
 #     return query_items
 
+@app.get("/items/")
+async def read_items(ads_id: str | None = Cookie(default=None)):
+    return {"ads_id": ads_id}
+
 
 @app.get("/users/{user_id}/items/{item_id}")
 async def read_user_item(user_id: int, item_id: str, q: str | None = None, short: bool = False):
@@ -104,12 +110,26 @@ async def read_user_item(user_id: int, item_id: str, q: str | None = None, short
     return item
 
 
+class Image(BaseModel):
+    url: HttpUrl
+    name: str
+
+
 class Item(BaseModel):
     name: str
     description: str | None = None
     price: float
     tax: float | None = None
+    tags: set[str] = set()
+    image: Image | None = None
 
+
+class Offer(BaseModel):
+    name: str
+    description: str | None = None
+    price: float
+    items: list[Item]
+    
 
 class User(BaseModel):
     username: str
@@ -132,6 +152,22 @@ async def create_item1(item: Item):
     return item_dict
 
 
+@app.put("/items/{item_id}")
+async def update_item(item_id: int, item: Item):
+    results = {"item_id": item_id, "item": item}
+    return results
+
+
+@app.post("/offers/")
+async def create_offer(offer: Offer):
+    return offer
+
+
+@app.post("/images/multiple/")
+async def create_multiple_images(images: list[Image]):
+    return images
+
+
 # @app.put("/items/{item_id}")
 # async def create_item2(item_id: int, item: Item, q: str | None = None):
 #     item_dict = await create_item1(item)
@@ -140,19 +176,19 @@ async def create_item1(item: Item):
 #         result.update({"q": q})
 #     return result
 
-@app.put("/items/{item_id}")
-async def update_item(
-    *, # 왜 있는거지???
-    item_id: int = Path(title="The ID of the item to get", ge=0, le=1000),
-    q: str | None = None,
-    item: Item | None = None,
-    user: User | None = None
-):
-    results = {"item_id": item_id}
-    if q:
-        results.update({"q": q})
-    if item:
-        results.update({"item": item})
-    if user:
-        results.update({"user": user})
-    return results
+# @app.put("/items/{item_id}")
+# async def update_item(
+#     *, # 왜 있는거지???
+#     item_id: int = Path(title="The ID of the item to get", ge=0, le=1000),
+#     q: str | None = None,
+#     item: Item | None = None,
+#     user: User | None = None
+# ):
+#     results = {"item_id": item_id}
+#     if q:
+#         results.update({"q": q})
+#     if item:
+#         results.update({"item": item})
+#     if user:
+#         results.update({"user": user})
+#     return results
